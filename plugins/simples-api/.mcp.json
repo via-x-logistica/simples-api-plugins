@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "simples-api": {
+      "type": "http",
+      "url": "https://api.simplesapi.com.br/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.simples_api_key}"
+      }
+    }
+  }
+}

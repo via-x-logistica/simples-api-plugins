@@ -1,0 +1,18 @@
+{
+  "name": "simples-api",
+  "owner": {
+    "name": "Simples API",
+    "email": "contato@simplesapi.com.br"
+  },
+  "metadata": {
+    "description": "Plugins da Simples API para o Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "simples-api",
+      "source": "./plugins/simples-api",
+      "description": "Consulta de veículos pela placa e leitura de placas em fotos: a skill que ensina a API REST e o servidor MCP da Simples API.",
+      "homepage": "https://simplesapi.com.br/mcp"
+    }
+  ]
+}

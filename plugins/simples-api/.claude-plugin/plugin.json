@@ -1,0 +1,31 @@
+{
+  "name": "simples-api",
+  "version": "1.0.1",
+  "description": "Consulta de veículos brasileiros pela placa e leitura de placas em fotos: a skill que ensina a API REST da Simples API e o servidor MCP, já configurado com a sua API key.",
+  "author": {
+    "name": "Simples API",
+    "email": "contato@simplesapi.com.br",
+    "url": "https://simplesapi.com.br"
+  },
+  "homepage": "https://simplesapi.com.br/mcp",
+  "repository": "https://github.com/via-x-logistica/simples-api-plugins",
+  "license": "MIT",
+  "privacyPolicyUrl": "https://simplesapi.com.br/privacidade",
+  "keywords": [
+    "placa",
+    "veiculo",
+    "fipe",
+    "ocr",
+    "brasil",
+    "mcp"
+  ],
+  "userConfig": {
+    "simples_api_key": {
+      "type": "string",
+      "title": "API key da Simples API",
+      "description": "A sua API key (começa com sk_live_). Fica no painel da Simples API, na aba MCP: https://simplesapi.com.br/dashboard/ia",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

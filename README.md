@@ -22,13 +22,21 @@ Para testar, peça: "Qual é o meu saldo na Simples API?". A consulta de saldo �
 
 ## Trocar a API key
 
-Pelo terminal, troque a chave guardada pelo plugin:
+No Claude Code, rode e cole a nova chave:
 
-```bash
-echo '{"simples_api_key": "SUA_NOVA_API_KEY"}' | claude plugin configure simples-api@simples-api --values-stdin
+```
+/plugin configure simples-api@simples-api
 ```
 
-Depois, reinicie o Claude Code. Se a chave estiver errada, as ferramentas respondem com erro de API key inválida (401).
+Ou, pelo terminal (a chave é lida sem aparecer na tela nem ficar no histórico do shell):
+
+```bash
+printf 'API key: '; read -rs CHAVE; echo; printf '{"simples_api_key": "%s"}' "$CHAVE" | claude plugin configure simples-api@simples-api --values-stdin; unset CHAVE
+```
+
+Depois, reinicie o Claude Code.
+
+Com a chave errada, o Claude Code não carrega as ferramentas: em `/mcp`, o servidor `simples-api` aparece com falha (HTTP 401). Troque a chave como acima.
 
 ## Preços
 
