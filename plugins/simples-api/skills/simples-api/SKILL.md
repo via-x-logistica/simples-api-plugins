@@ -20,7 +20,7 @@ Use esta API para:
 - Consultar um veículo pela placa: marca, modelo, versão, ano de fabricação e ano modelo, cor, combustível, tipo, espécie, passageiros, cilindradas, eixos, município, UF e origem.
 - Obter, pela mesma consulta, a versão da tabela FIPE com o preço do mês e o valor no mesmo mês dos anos anteriores, a ficha técnica (potência, torque, câmbio, consumo, pesos, dimensões) e a bateria indicada (Moura e Heliar).
 - Ler placas em fotos (OCR), com a confiança de cada leitura e, se pedir, os mesmos dados do veículo de cada placa lida.
-- Calcular os pedágios de uma rota: a rota entre origem, paradas e destino, as praças de pedágio com a tarifa de cada uma para o veículo (carro, moto, caminhão ou ônibus, pelos eixos ou pela placa) e o total, com a fonte oficial de cada tarifa. Caminhão e ônibus recebem uma rota que desvia das restrições a pesados em vigor na hora da passagem.
+- Calcular os pedágios de uma rota: a rota entre origem, paradas e destino, as praças de pedágio com a tarifa de cada uma para o veículo (carro, moto, caminhão ou ônibus, pelos eixos ou pela placa) e o total. Caminhão e ônibus recebem uma rota que desvia das restrições a pesados em vigor na hora da passagem.
 
 Não use para multas, débitos, IPVA, restrições, histórico de roubo ou dados do proprietário: a API não traz nada disso (veja "O que a resposta não traz").
 
@@ -207,7 +207,6 @@ Resposta (200), de São Bernardo do Campo a Santos, de carro:
       "direction": null, "operator": "Ecovias Imigrantes", "road": "SP-150;BR-050", "km": 31.106,
       "state": "SP", "lat": -23.7893825, "lng": -46.5196759,
       "price_cents": 4060, "category": "car_2", "axles": 2, "valid_from": "2026-07-01",
-      "source_url": "https://do-api-web-search.doe.sp.gov.br/v2/publications/ae9b25c2-b16b-4c00-7d6a-08ded05f3a56",
       "free_flow": null, "charged_at": null, "band": null, "tag_discount": null
     }
   ],
@@ -218,9 +217,9 @@ Resposta (200), de São Bernardo do Campo a Santos, de carro:
 Como ler a resposta:
 
 - `geometry` traz todos os pontos da rota (1.375 neste exemplo; acima estão só os dois primeiros), para desenhar no mapa.
-- `tolls`: as praças e as passagens de free flow, na ordem da rota. `price_cents` é a tarifa para a categoria do trecho (`category`, `axles`); `source_url` é a página oficial de onde a tarifa foi lida, para conferir, e vem `null` quando a praça está sem tarifa vigente. Um item com `type: "free_flow"` (Dutra, na Região Metropolitana de São Paulo) traz em `free_flow` a entrada, a saída e os km, e em `charged_at` a hora da passagem; nos pórticos da Rio-Santos, `band` diz a faixa de preço usada (`standard` em dia útil, `weekend` em fim de semana e feriado).
+- `tolls`: as praças e as passagens de free flow, na ordem da rota. `price_cents` é a tarifa para a categoria do trecho (`category`, `axles`) e vem `null` quando a praça está sem tarifa vigente. Um item com `type: "free_flow"` (Dutra, na Região Metropolitana de São Paulo) traz em `free_flow` a entrada, a saída e os km, e em `charged_at` a hora da passagem; nos pórticos da Rio-Santos, `band` diz a faixa de preço usada (`standard` em dia útil, `weekend` em fim de semana e feriado).
 - `total_cents` soma tudo. `complete` vem `false` quando alguma praça ficou sem tarifa para a categoria ou está com a cobrança suspensa (aviso `TOLL_CHARGE_SUSPENDED` em `warnings`), e aí a rota não é cobrada. O aviso `TOLL_PRICE_UNDER_REVIEW` diz que a fonte do preço de uma praça está em revisão; o preço é mantido e a rota segue completa.
-- `routing_profile` e `legal`: caminhão e ônibus são roteados com perfil próprio (dimensões típicas pelos eixos cobrados) e desviam das restrições a pesados em vigor na hora em que passariam por elas. `restrictions[]` lista as regras que moldaram a rota (`honored: true`) e as que a rota ainda atravessa (`honored: false`), cada uma com `kind`, `road`, `city`, `state`, `window`, `source_url` e `message`. Quando não há caminho que respeite as regras, vem a rota de um carro com `legal: false`, o aviso `TRUCK_RULE_UNAVOIDABLE` e sem cobrança. Carro e moto sempre vêm com `restrictions: []`.
+- `routing_profile` e `legal`: caminhão e ônibus são roteados com perfil próprio (dimensões típicas pelos eixos cobrados) e desviam das restrições a pesados em vigor na hora em que passariam por elas. `restrictions[]` lista as regras que moldaram a rota (`honored: true`) e as que a rota ainda atravessa (`honored: false`), cada uma com `kind`, `road`, `city`, `state`, `window` e `message`. Quando não há caminho que respeite as regras, vem a rota de um carro com `legal: false`, o aviso `TRUCK_RULE_UNAVOIDABLE` e sem cobrança. Carro e moto sempre vêm com `restrictions: []`.
 - `vehicle.stretches` numera os trechos pelos pontos do pedido: 0 é a origem, 1 a n as paradas, n+1 o destino. Cada item de `tolls` diz a categoria e os eixos cobrados no seu trecho.
 
 O mesmo trajeto com `{"type": "truck", "axles": 5}` devolve `routing_profile: "truck"`, `category: "commercial_5"` e R$ 203,00 em Riacho Grande, descendo pela Anchieta, porque a Imigrantes proíbe pesados na descida.
@@ -285,7 +284,7 @@ Os preços em vigor ficam em https://simplesapi.com.br/precos.
 6. **Em lotes**, confira o saldo antes, mantenha no máximo 100 requisições por minuto (uma fila com uma chamada a cada 0,6 s basta) e pare no primeiro 402.
 7. **Use um timeout de 30 s** por requisição. A maioria das respostas chega em poucos segundos.
 8. **No OCR**, envie fotos comprimidas (JPEG) e use `include_vehicle_info` só quando precisar dos dados, porque cada placa consultada custa mais R$ 0,10.
-9. **Na rota de pedágio**, mande `departure_at` quando a viagem não é agora: as faixas de horário, o free flow e as restrições a pesados dependem da hora da passagem. Guarde o `source_url` de cada praça para mostrar de onde veio a tarifa, e trate `complete: false` e `legal: false` como "sem preço fechado", nunca como total zero.
+9. **Na rota de pedágio**, mande `departure_at` quando a viagem não é agora: as faixas de horário, o free flow e as restrições a pesados dependem da hora da passagem. Trate `complete: false` e `legal: false` como "sem preço fechado", nunca como total zero.
 
 ## Exemplos
 
@@ -450,7 +449,7 @@ A consulta devolve dados do veículo, não do dono: nada de nome, CPF, telefone,
 
 As imagens enviadas ao OCR são processadas em memória e descartadas.
 
-A rota de pedágio é uma estimativa: as tarifas vêm das fontes oficiais citadas em cada item de `tolls`, e a rota e as restrições dependem do mapa (OpenStreetMap) e das regras publicadas pelos órgãos.
+A rota de pedágio é uma estimativa: as tarifas vêm das tabelas oficiais das concessionárias e dos poderes concedentes, e a rota e as restrições dependem do mapa (OpenStreetMap) e das regras publicadas pelos órgãos.
 
 ## Contato
 
