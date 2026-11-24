@@ -1,7 +1,7 @@
 {
   "name": "simples-api",
-  "version": "1.0.1",
-  "description": "Consulta de veículos brasileiros pela placa e leitura de placas em fotos: a skill que ensina a API REST da Simples API e o servidor MCP, já configurado com a sua API key.",
+  "version": "1.0.2",
+  "description": "Consulta de veículos brasileiros pela placa e pedágios de uma rota: a skill que ensina a API REST da Simples API e o servidor MCP, já configurado com a sua API key.",
   "author": {
     "name": "Simples API",
     "email": "contato@simplesapi.com.br",

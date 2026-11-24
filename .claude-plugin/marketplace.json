@@ -11,7 +11,7 @@
     {
       "name": "simples-api",
       "source": "./plugins/simples-api",
-      "description": "Consulta de veículos pela placa e leitura de placas em fotos: a skill que ensina a API REST e o servidor MCP da Simples API.",
+      "description": "Consulta de veículos pela placa e pedágios de uma rota: a skill que ensina a API REST e o servidor MCP da Simples API.",
       "homepage": "https://simplesapi.com.br/mcp"
     }
   ]

@@ -1,15 +1,17 @@
 ---
 name: simples-api
-description: Integra a Simples API (api.simplesapi.com.br), API brasileira de dados de veículos. Use quando precisar consultar um veículo pela placa brasileira (Mercosul ou antiga) e obter marca, modelo, versão, ano, cor, combustível, município e UF, o preço FIPE com o histórico, a ficha técnica ou a bateria indicada; quando precisar ler placas de veículos em fotos (OCR); ou quando precisar conferir o saldo da conta. Ensina a autenticação, os endpoints, os campos da resposta, os erros, o que é cobrado e as boas práticas, com exemplos em curl, Python e TypeScript.
+description: Integra a Simples API (api.simplesapi.com.br), API brasileira de dados de veículos. Use quando precisar consultar um veículo pela placa brasileira (Mercosul ou antiga) e obter marca, modelo, versão, ano, cor, combustível, município e UF, o preço FIPE com o histórico, a ficha técnica ou a bateria indicada; quando precisar ler placas de veículos em fotos (OCR); quando precisar calcular os pedágios de uma rota no Brasil (as praças, a tarifa para o veículo e o total, com rota de caminhão e ônibus que respeita as restrições a pesados); ou quando precisar conferir o saldo da conta. Ensina a autenticação, os endpoints, os campos da resposta, os erros, o que é cobrado e as boas práticas, com exemplos em curl, Python e TypeScript.
 ---
 
 # Simples API
 
-A Simples API devolve dados de veículos brasileiros a partir da placa em texto ou de uma foto. A base é `https://api.simplesapi.com.br`, as respostas são JSON e a cobrança é pré-paga, por chamada.
+A Simples API devolve dados de veículos brasileiros a partir da placa em texto ou de uma foto, e calcula os pedágios de uma rota. A base é `https://api.simplesapi.com.br`, as respostas são JSON e a cobrança é por plano mensal ou avulso pré-pago, por chamada.
 
 - Documentação completa: https://simplesapi.com.br/docs
 - Preços: https://simplesapi.com.br/precos
 - Servidor MCP para agentes: https://simplesapi.com.br/mcp
+- Página e playground do pedágio: https://simplesapi.com.br/api-pedagio
+- Calculadora de pedágio pública (grátis, sem cadastro, 20 cálculos por dia): https://simplesapi.com.br/calculadora-pedagio
 
 ## Quando usar
 
@@ -18,6 +20,7 @@ Use esta API para:
 - Consultar um veículo pela placa: marca, modelo, versão, ano de fabricação e ano modelo, cor, combustível, tipo, espécie, passageiros, cilindradas, eixos, município, UF e origem.
 - Obter, pela mesma consulta, a versão da tabela FIPE com o preço do mês e o valor no mesmo mês dos anos anteriores, a ficha técnica (potência, torque, câmbio, consumo, pesos, dimensões) e a bateria indicada (Moura e Heliar).
 - Ler placas em fotos (OCR), com a confiança de cada leitura e, se pedir, os mesmos dados do veículo de cada placa lida.
+- Calcular os pedágios de uma rota: a rota entre origem, paradas e destino, as praças de pedágio com a tarifa de cada uma para o veículo (carro, moto, caminhão ou ônibus, pelos eixos ou pela placa) e o total, com a fonte oficial de cada tarifa. Caminhão e ônibus recebem uma rota que desvia das restrições a pesados em vigor na hora da passagem.
 
 Não use para multas, débitos, IPVA, restrições, histórico de roubo ou dados do proprietário: a API não traz nada disso (veja "O que a resposta não traz").
 
@@ -63,13 +66,15 @@ Resposta (200):
     "city": "SAO PAULO", "state": "SP", "origin": "NACIONAL"
   },
   "fipe": {
-    "level": "exact", "code": "005340-6", "brand": "VW - VolksWagen",
+    "level": "exact", "code": "005490-9", "brand": "VW - VolksWagen",
     "name": "Gol 1.0 Flex 12V 5p", "model_year": 2021, "zero_km": false, "fuel": "Flex",
-    "price": 55210.0, "price_month": "2026-11",
-    "specs": {"engine": "1.0 12V", "power_cv": {"etanol": 84, "gasolina": 75}, "transmission": "manual", "body": "hatch", "doors": 5},
+    "price": 46837.0, "price_month": "2026-11",
+    "specs": {"engine": "1.0 12V", "power_cv": {"etanol": 84, "gasolina": 77}, "transmission": "manual", "body": "hatch", "doors": 5},
     "price_history": [
-      {"month": "2024-11", "price": 58900.0}, {"month": "2025-11", "price": 56800.0},
-      {"month": "2026-11", "price": 55210.0}
+      {"month": "2020-11", "price": 43971.0}, {"month": "2021-11", "price": 55066.0},
+      {"month": "2022-11", "price": 55488.0}, {"month": "2023-11", "price": 50997.0},
+      {"month": "2024-11", "price": 49969.0}, {"month": "2025-11", "price": 46966.0},
+      {"month": "2026-11", "price": 46837.0}
     ],
     "alternatives": []
   },
@@ -77,7 +82,10 @@ Resposta (200):
     "options": [
       {"maker": "moura", "code": "M50ED", "alt_code": "Z50ED", "start_stop": null, "level": "exact",
        "ah": 50, "cca": 390, "polarity": "direita", "technology": "convencional",
-       "length_mm": 210, "width_mm": 175, "height_mm": 190, "weight_kg": 12.74}
+       "length_mm": 210, "width_mm": 175, "height_mm": 190, "weight_kg": 12.74},
+      {"maker": "heliar", "code": "HE50GD", "alt_code": null, "start_stop": null, "level": "exact",
+       "ah": 50, "cca": 420, "polarity": null, "technology": "convencional",
+       "length_mm": 207, "width_mm": 175, "height_mm": 190, "weight_kg": null}
     ]
   }
 }
@@ -153,6 +161,72 @@ Sem corpo, com a mesma API key. Resposta (200):
 
 Use antes de um lote, para saber quantas consultas cabem no saldo.
 
+### POST /v1/toll/route: pedágios de uma rota
+
+Corpo:
+
+```json
+{
+  "origin": {"lat": -23.667, "lng": -46.579},
+  "destination": {"lat": -23.9608, "lng": -46.3336},
+  "waypoints": [],
+  "vehicle": {"type": "car", "axles": 2},
+  "departure_at": "2026-11-19T16:43:00-03:00",
+  "tag": false
+}
+```
+
+- `origin` e `destination`: coordenadas WGS84. `waypoints` são as paradas no caminho, na ordem, cada uma com `lat` e `lng`.
+- `vehicle`: informe `type` (`car`, `motorcycle`, `truck` ou `bus`) e `axles`, ou a `plate`. Pela placa, o tipo e os eixos vêm da consulta veicular, e `axles` substitui os eixos da consulta (a placa do cavalo mecânico não diz os eixos da carreta). `articulated` (opcional) diz se o veículo é articulado, para as restrições que separam articulado de rígido.
+- Caminhão e ônibus podem mudar os eixos cobrados numa parada: `axles` em `waypoints[]` vale "a partir daqui" (um caminhão de 5 eixos que descarrega em Campinas e segue com 3). Em carro e moto, `waypoints[].axles` dá 422.
+- `departure_at`: data e hora da partida em ISO 8601 (sem fuso, vale horário de Brasília; sem o campo, vale agora). Define a data das tarifas e a hora em que o veículo passa em cada praça e pórtico, para as faixas de horário, o free flow e as restrições com janela. Aceita de 90 dias atrás até 60 dias à frente.
+- `tag`: com `true`, aplica o desconto TAG do free flow e das praças que o têm.
+
+Resposta (200), de São Bernardo do Campo a Santos, de carro:
+
+```json
+{
+  "distance_meters": 57750,
+  "duration_seconds": 2982,
+  "geometry": [{"lat": -23.66718, "lng": -46.578946}, {"lat": -23.667215, "lng": -46.579086}],
+  "vehicle": {
+    "category": "car_2", "type": "car", "axles": 2, "articulated": false,
+    "plate": null, "vehicle_info": null,
+    "stretches": [{"from_point": 0, "to_point": 1, "axles": 2, "category": "car_2"}]
+  },
+  "routing_profile": "car",
+  "legal": true,
+  "restrictions": [],
+  "departure_at": "2026-11-19T16:43:36-03:00",
+  "total_cents": 4060,
+  "currency": "BRL",
+  "complete": true,
+  "tolls": [
+    {
+      "type": "plaza", "id": "887c9792-1c79-4c2f-ac15-6ab36fc30417", "name": "Riacho Grande",
+      "direction": null, "operator": "Ecovias Imigrantes", "road": "SP-150;BR-050", "km": 31.106,
+      "state": "SP", "lat": -23.7893825, "lng": -46.5196759,
+      "price_cents": 4060, "category": "car_2", "axles": 2, "valid_from": "2026-07-01",
+      "source_url": "https://do-api-web-search.doe.sp.gov.br/v2/publications/ae9b25c2-b16b-4c00-7d6a-08ded05f3a56",
+      "free_flow": null, "charged_at": null, "band": null, "tag_discount": null
+    }
+  ],
+  "warnings": []
+}
+```
+
+Como ler a resposta:
+
+- `geometry` traz todos os pontos da rota (1.375 neste exemplo; acima estão só os dois primeiros), para desenhar no mapa.
+- `tolls`: as praças e as passagens de free flow, na ordem da rota. `price_cents` é a tarifa para a categoria do trecho (`category`, `axles`); `source_url` é a página oficial de onde a tarifa foi lida, para conferir, e vem `null` quando a praça está sem tarifa vigente. Um item com `type: "free_flow"` (Dutra, na Região Metropolitana de São Paulo) traz em `free_flow` a entrada, a saída e os km, e em `charged_at` a hora da passagem; nos pórticos da Rio-Santos, `band` diz a faixa de preço usada (`standard` em dia útil, `weekend` em fim de semana e feriado).
+- `total_cents` soma tudo. `complete` vem `false` quando alguma praça ficou sem tarifa para a categoria ou está com a cobrança suspensa (aviso `TOLL_CHARGE_SUSPENDED` em `warnings`), e aí a rota não é cobrada. O aviso `TOLL_PRICE_UNDER_REVIEW` diz que a fonte do preço de uma praça está em revisão; o preço é mantido e a rota segue completa.
+- `routing_profile` e `legal`: caminhão e ônibus são roteados com perfil próprio (dimensões típicas pelos eixos cobrados) e desviam das restrições a pesados em vigor na hora em que passariam por elas. `restrictions[]` lista as regras que moldaram a rota (`honored: true`) e as que a rota ainda atravessa (`honored: false`), cada uma com `kind`, `road`, `city`, `state`, `window`, `source_url` e `message`. Quando não há caminho que respeite as regras, vem a rota de um carro com `legal: false`, o aviso `TRUCK_RULE_UNAVOIDABLE` e sem cobrança. Carro e moto sempre vêm com `restrictions: []`.
+- `vehicle.stretches` numera os trechos pelos pontos do pedido: 0 é a origem, 1 a n as paradas, n+1 o destino. Cada item de `tolls` diz a categoria e os eixos cobrados no seu trecho.
+
+O mesmo trajeto com `{"type": "truck", "axles": 5}` devolve `routing_profile: "truck"`, `category: "commercial_5"` e R$ 203,00 em Riacho Grande, descendo pela Anchieta, porque a Imigrantes proíbe pesados na descida.
+
+Custa R$ 0,10 por rota calculada com todas as praças tarifadas (`complete: true`) e legal para o veículo (`legal: true`), inclusive rota sem pedágio. Com `plate`, mais R$ 0,10 pelos dados do veículo, no mesmo lançamento (R$ 0,20 no total). Rota incompleta ou sem caminho legal não é cobrada; com `plate`, cobra só os R$ 0,10 dos dados, que vêm na resposta. Sem rota entre os pontos (404), dados inválidos (422) e cálculo indisponível (503) não são cobrados.
+
 ## Erros
 
 Todo erro vem no mesmo formato:
@@ -171,11 +245,15 @@ Decida pelo `code`, não pela `message`:
 | 403 | `EMAIL_NOT_VERIFIED` | Não | Confirmar o e-mail da conta. |
 | 403 | `TERMS_NOT_ACCEPTED` | Não | Aceitar os Termos de Uso no painel. |
 | 404 | `VEHICLE_NOT_FOUND` | Sim (R$ 0,10) | Placa sem dados. Guardar esse resultado e não consultar a mesma placa de novo. |
+| 404 | `ROUTE_NOT_FOUND` | Não | Nenhuma rota entre os pontos. Conferir as coordenadas (dentro do Brasil, perto de uma via). |
 | 422 | `VALIDATION_ERROR` | Não | Placa ou corpo inválido. Validar a placa antes de chamar. |
 | 422 | `OCR_FAILED` | Não | Nenhuma placa lida na foto. Pedir outra foto, mais nítida ou mais próxima. |
+| 422 | `VEHICLE_CATEGORY_UNDETERMINED` | Não | A placa não define a categoria do veículo. Repetir com `type` e `axles`. |
+| 422 | `WAYPOINT_AXLES_NOT_ALLOWED` | Não | `waypoints[].axles` só vale para caminhão e ônibus. Tirar o campo. |
 | 429 | `RATE_LIMIT_EXCEEDED` | Não | Passou do limite por minuto. Esperar até `X-RateLimit-Reset` e seguir. |
 | 503 | `VEHICLE_API_UNAVAILABLE` | Não | Consulta indisponível. Tentar de novo com espera crescente, no máximo 3 tentativas. |
 | 503 | `OCR_UNAVAILABLE` | Não | Leitura indisponível. Tentar de novo com espera crescente, no máximo 3 tentativas. |
+| 503 | `ROUTING_UNAVAILABLE` | Não | Cálculo de rota indisponível. Tentar de novo com espera crescente, no máximo 3 tentativas. |
 
 ## Limites
 
@@ -183,9 +261,15 @@ O limite é de 100 requisições por minuto por conta. As respostas trazem os he
 
 ## Preços
 
+Há dois jeitos de pagar, na mesma conta e com a mesma API key: o plano mensal e o avulso pré-pago.
+
+- Planos mensais, no cartão de crédito, com cobrança mensal e cancelamento quando quiser: Básico, 250 chamadas por R$ 22,90; Pro, 1.000 chamadas por R$ 79,90; Escala, 3.000 chamadas por R$ 209,90; Personalizado, de 5.000 a 200.000 chamadas por mês a R$ 0,06 cada. Cada consulta pela placa e cada rota de pedágio calculada gastam 1 chamada; a leitura de placa em foto vem incluída até o tamanho da franquia. O valor que você não usar vira crédito, que não expira e é gasto no avulso.
+- Avulso, pré-pago e sem mensalidade, com os preços abaixo.
+
 - Leitura de placas (`POST /v1/ocr/plate`): R$ 0,05 por placa lida.
 - Dados do veículo junto com a leitura (`"include_vehicle_info": true`): mais R$ 0,10 por placa consultada, R$ 0,15 no total.
 - Consulta pela placa (`POST /v1/vehicle/plate`): R$ 0,10 por consulta, com ou sem dados retornados.
+- Pedágios de uma rota (`POST /v1/toll/route`): R$ 0,10 por rota calculada com todas as praças tarifadas e legal para o veículo, inclusive rota sem pedágio; com placa, mais R$ 0,10 pelos dados do veículo.
 - Saldo (`GET /v1/billing/balance`): grátis.
 - A conta nova ganha R$ 5,00 de crédito grátis. A recarga é feita no painel, via Mercado Pago (Pix ou cartão), com mínimo de R$ 20,00.
 
@@ -201,6 +285,7 @@ Os preços em vigor ficam em https://simplesapi.com.br/precos.
 6. **Em lotes**, confira o saldo antes, mantenha no máximo 100 requisições por minuto (uma fila com uma chamada a cada 0,6 s basta) e pare no primeiro 402.
 7. **Use um timeout de 30 s** por requisição. A maioria das respostas chega em poucos segundos.
 8. **No OCR**, envie fotos comprimidas (JPEG) e use `include_vehicle_info` só quando precisar dos dados, porque cada placa consultada custa mais R$ 0,10.
+9. **Na rota de pedágio**, mande `departure_at` quando a viagem não é agora: as faixas de horário, o free flow e as restrições a pesados dependem da hora da passagem. Guarde o `source_url` de cada praça para mostrar de onde veio a tarifa, e trate `complete: false` e `legal: false` como "sem preço fechado", nunca como total zero.
 
 ## Exemplos
 
@@ -221,6 +306,12 @@ curl -X POST "https://api.simplesapi.com.br/v1/vehicle/plate" \
 
 curl "https://api.simplesapi.com.br/v1/billing/balance" \
   -H "Authorization: Bearer $SIMPLES_API_KEY"
+
+# Pedágios de São Bernardo do Campo a Santos para um caminhão de 5 eixos
+curl -X POST "https://api.simplesapi.com.br/v1/toll/route" \
+  -H "Authorization: Bearer $SIMPLES_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"origin": {"lat": -23.667, "lng": -46.579}, "destination": {"lat": -23.9608, "lng": -46.3336}, "vehicle": {"type": "truck", "axles": 5}}'
 ```
 
 ### Python (httpx)
@@ -335,8 +426,8 @@ export async function consultarPlaca(placa: string): Promise<Record<string, unkn
 Para um agente de IA usar a API direto, sem escrever código, existe o servidor MCP:
 
 - URL: `https://api.simplesapi.com.br/mcp`, transporte Streamable HTTP, com a mesma key no header `Authorization: Bearer`.
-- Ferramentas: `lookup_vehicle_by_plate` (consulta pela placa), `read_plates_from_image` (placas numa imagem, por `image_url` https ou `image_base64`) e `get_balance` (saldo, grátis).
-- A cobrança é igual à dos endpoints REST.
+- Ferramentas: `lookup_vehicle_by_plate` (consulta pela placa), `read_plates_from_image` (placas numa imagem, por `image_url` https ou `image_base64`), `get_balance` (saldo, grátis) e `calculate_toll_route` (pedágios de uma rota: `origin`, `destination`, `waypoints`, `vehicle` com `type` e `axles` ou `plate`, `departure_at` e `tag`, como em POST /v1/toll/route; a resposta vem sem a geometria).
+- A cobrança é igual à dos endpoints REST: a rota de pedágio custa R$ 0,10 quando sai completa e legal para o veículo.
 
 No Claude Code, o plugin instala esta skill e o servidor MCP juntos, e pede a key na instalação:
 
@@ -358,6 +449,8 @@ O passo a passo para Cursor, VS Code, Windsurf, n8n e as APIs da Anthropic e da 
 A consulta devolve dados do veículo, não do dono: nada de nome, CPF, telefone, e-mail ou endereço do proprietário. Também não traz multas, débitos, IPVA, restrições, histórico de roubo, chassi nem RENAVAM. Assim passa menos dado pessoal de terceiros pelo sistema de quem integra.
 
 As imagens enviadas ao OCR são processadas em memória e descartadas.
+
+A rota de pedágio é uma estimativa: as tarifas vêm das fontes oficiais citadas em cada item de `tolls`, e a rota e as restrições dependem do mapa (OpenStreetMap) e das regras publicadas pelos órgãos.
 
 ## Contato
 
