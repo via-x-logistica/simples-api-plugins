@@ -217,14 +217,14 @@ Resposta (200), de São Bernardo do Campo a Santos, de carro:
 Como ler a resposta:
 
 - `geometry` traz todos os pontos da rota (1.375 neste exemplo; acima estão só os dois primeiros), para desenhar no mapa.
-- `tolls`: as praças e as passagens de free flow, na ordem da rota. `price_cents` é a tarifa para a categoria do trecho (`category`, `axles`) e vem `null` quando a praça está sem tarifa vigente. Um item com `type: "free_flow"` (Dutra, na Região Metropolitana de São Paulo) traz em `free_flow` a entrada, a saída e os km, e em `charged_at` a hora da passagem; nos pórticos da Rio-Santos, `band` diz a faixa de preço usada (`standard` em dia útil, `weekend` em fim de semana e feriado).
+- `tolls`: as praças e as passagens de free flow, na ordem da rota. `price_cents` é a tarifa para a categoria do trecho (`category`, `axles`) e vem `null` quando a praça está sem tarifa vigente. Um item com `type: "free_flow"` (Dutra, na Região Metropolitana de São Paulo) traz em `free_flow` a entrada, a saída, os km e a hora da passagem (`free_flow.charged_at`, com `free_flow.hour` e `free_flow.day_type`); o `charged_at` do próprio item vem `null`. Nos pórticos da Rio-Santos, que vêm como praças (`type: "plaza"`), a hora da passagem fica no `charged_at` do item e `band` diz a faixa de preço usada (`standard` em dia útil, `weekend` em fim de semana e feriado).
 - `total_cents` soma tudo. `complete` vem `false` quando alguma praça ficou sem tarifa para a categoria ou está com a cobrança suspensa (aviso `TOLL_CHARGE_SUSPENDED` em `warnings`), e aí a rota não é cobrada. O aviso `TOLL_PRICE_UNDER_REVIEW` diz que a fonte do preço de uma praça está em revisão; o preço é mantido e a rota segue completa.
 - `routing_profile` e `legal`: caminhão e ônibus são roteados com perfil próprio (dimensões típicas pelos eixos cobrados) e desviam das restrições a pesados em vigor na hora em que passariam por elas. `restrictions[]` lista as regras que moldaram a rota (`honored: true`) e as que a rota ainda atravessa (`honored: false`), cada uma com `kind`, `road`, `city`, `state`, `window` e `message`. Quando não há caminho que respeite as regras, vem a rota de um carro com `legal: false`, o aviso `TRUCK_RULE_UNAVOIDABLE` e sem cobrança. Carro e moto sempre vêm com `restrictions: []`.
 - `vehicle.stretches` numera os trechos pelos pontos do pedido: 0 é a origem, 1 a n as paradas, n+1 o destino. Cada item de `tolls` diz a categoria e os eixos cobrados no seu trecho.
 
 O mesmo trajeto com `{"type": "truck", "axles": 5}` devolve `routing_profile: "truck"`, `category: "commercial_5"` e R$ 203,00 em Riacho Grande, descendo pela Anchieta, porque a Imigrantes proíbe pesados na descida.
 
-Custa R$ 0,10 por rota calculada com todas as praças tarifadas (`complete: true`) e legal para o veículo (`legal: true`), inclusive rota sem pedágio. Com `plate`, mais R$ 0,10 pelos dados do veículo, no mesmo lançamento (R$ 0,20 no total). Rota incompleta ou sem caminho legal não é cobrada; com `plate`, cobra só os R$ 0,10 dos dados, que vêm na resposta. Sem rota entre os pontos (404), dados inválidos (422) e cálculo indisponível (503) não são cobrados.
+Custa R$ 0,10 por rota calculada com todas as praças tarifadas (`complete: true`) e legal para o veículo (`legal: true`), inclusive rota sem pedágio. Com `plate`, mais R$ 0,10 pelos dados do veículo, no mesmo lançamento (R$ 0,20 no total). Rota incompleta ou sem caminho legal não é cobrada; com `plate`, cobra só os R$ 0,10 dos dados, que vêm na resposta. Sem rota entre os pontos (404), placa sem dados (404, `VEHICLE_NOT_FOUND`), dados inválidos (422) e cálculo ou consulta indisponível (503) não são cobrados.
 
 ## Erros
 
@@ -243,7 +243,7 @@ Decida pelo `code`, não pela `message`:
 | 402 | `INSUFFICIENT_BALANCE` | Não | Parar o lote e avisar que é preciso recarregar no painel (Pix ou cartão, mínimo de R$ 20,00). |
 | 403 | `EMAIL_NOT_VERIFIED` | Não | Confirmar o e-mail da conta. |
 | 403 | `TERMS_NOT_ACCEPTED` | Não | Aceitar os Termos de Uso no painel. |
-| 404 | `VEHICLE_NOT_FOUND` | Sim (R$ 0,10) | Placa sem dados. Guardar esse resultado e não consultar a mesma placa de novo. |
+| 404 | `VEHICLE_NOT_FOUND` | Na consulta pela placa, sim (R$ 0,10); na rota de pedágio, não | Placa sem dados. Guardar esse resultado e não consultar a mesma placa de novo. |
 | 404 | `ROUTE_NOT_FOUND` | Não | Nenhuma rota entre os pontos. Conferir as coordenadas (dentro do Brasil, perto de uma via). |
 | 422 | `VALIDATION_ERROR` | Não | Placa ou corpo inválido. Validar a placa antes de chamar. |
 | 422 | `OCR_FAILED` | Não | Nenhuma placa lida na foto. Pedir outra foto, mais nítida ou mais próxima. |

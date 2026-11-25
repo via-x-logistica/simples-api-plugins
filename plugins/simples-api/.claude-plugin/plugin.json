@@ -1,6 +1,6 @@
 {
   "name": "simples-api",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Consulta de veículos brasileiros pela placa e pedágios de uma rota: a skill que ensina a API REST da Simples API e o servidor MCP, já configurado com a sua API key.",
   "author": {
     "name": "Simples API",
