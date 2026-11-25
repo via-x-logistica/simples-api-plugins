@@ -11,7 +11,7 @@ A Simples API devolve dados de veículos brasileiros a partir da placa em texto 
 - Preços: https://simplesapi.com.br/precos
 - Servidor MCP para agentes: https://simplesapi.com.br/mcp
 - Página e playground do pedágio: https://simplesapi.com.br/api-pedagio
-- Calculadora de pedágio pública (grátis, sem cadastro, 20 cálculos por dia): https://simplesapi.com.br/calculadora-pedagio
+- Calculadora de pedágio pública (grátis, sem cadastro, 5 cálculos por dia): https://simplesapi.com.br/calculadora-pedagio
 
 ## Quando usar
 
